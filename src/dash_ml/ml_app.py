@@ -2,9 +2,24 @@ from dash import Dash, html, dcc
 from dash.dependencies import Output, Input, State
 
 app = Dash(__name__)
-app.layout = html.Div(
-    'hi there!',
-)
+app.layout = html.Div([
+    # title
+    
+    # left/right div
+    
+        # left div
+        # - MODE
+        # - TASK
+        # - UPLOAD DATA
+        # - MODEL
+        # - PARAMS
+        
+        # right div
+        # - output of read-in data
+        # - output of training
+    
+    # save/execute button
+])
 # """
 # Workflow needed:
 # I want to TRAIN a new model to CLASSIFY on my DATA with LABELS, using ALG
