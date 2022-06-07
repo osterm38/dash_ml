@@ -1,138 +1,238 @@
-from dash import Dash, html, dcc
-from dash.dependencies import Output, Input, State
+# -- imports --
+import base64
+import datetime
+import io
+import pandas as pd
+import pathlib
 
+from dash import (
+    Dash,
+    html,
+    dcc,
+    dash_table,
+)
+from dash.dependencies import (
+    Output,
+    Input,
+    State,
+)
+
+# -- globals --
+MODES = ['Train', 'Infer']
+TASKS_TO_MODEL_TYPES = {
+    'Binary Classification': {
+        'RF': 'Random Forest (RF)',
+        'BERT_bin': 'BERT',
+    },
+    'Clustering': {
+        'NMF': 'Non-negative Matrix Factorization (NMF)',
+        'LDA': 'Latent Dirichlet Allocation (LDA)',
+    },
+    'Masked Language Modeling': {
+        'BERT_mlm': 'BERT',
+    },
+}
+MODELS_TO_INSTANCES = {
+    model: [
+        # TO FILL IN DYNAMICALLY?
+    ] for task, dct in TASKS_TO_MODEL_TYPES.items() for model in dct
+}
+# TASKS_TO_MODEL_INSTANCES = {
+#     task: {
+#         model: [
+#             # TO FILL IN DYNAMICALLY?
+#         ] for model in dct 
+#     } for task, dct in TASKS_TO_MODEL_TYPES.items()
+# }
+MODELS_TO_PARAMS = {
+    # binary classifiers
+    'RF': {
+        'n_estimators': 100,
+    },
+    'BERT_bin': {
+        
+    },
+    # clustering algs
+    'NMF': {
+        
+    },
+    'LDA': {
+        
+    },
+    # MLM
+    'BERT_mlm': {
+        
+    },
+}
+assert set(MODELS_TO_INSTANCES) == set(MODELS_TO_PARAMS)
+
+# -- classes --
+
+# -- functions --
+
+# -- app def --
 app = Dash(__name__)
 app.layout = html.Div([
-    # title
-    
-    # left/right div
-    
-        # left div
-        # - MODE
-        # - TASK
-        # - UPLOAD DATA
-        # - MODEL
-        # - PARAMS
+    # (top) title
+    html.H1('Welcome to your Dash ML app!'),
+    html.Br(),
+
+    # (left) selections, (right) show what was input
+    html.Div([
+        # (left) selections
+        html.Div([
+            # - MODE
+            html.Label('Choose MODE:'),
+            dcc.Dropdown(MODES, id='dropdown-modes'),
+            html.Br(),
+            
+            # - TASK
+            html.Label('Choose TASK:'),
+            dcc.Dropdown(sorted(TASKS_TO_MODEL_TYPES), id='dropdown-tasks'),
+            html.Br(),
+            
+            # - UPLOAD DATA
+            html.Label('Upload DATA:'),
+            dcc.Upload(
+                id='upload-data',
+                children=html.Div([
+                    'Drag and Drop or ',
+                    html.A('Select Files'),
+                ]),
+                style={
+                    'width': '100%',
+                    'height': '60px',
+                    'lineHeight': '60px',
+                    'borderWidth': '1px',
+                    'borderStyle': 'dashed',
+                    'borderRadius': '5px',
+                    'textAlign': 'center',
+                    'margin': '10px',
+                },
+                # Allow multiple files to be uploaded
+                multiple=True),
+            html.Br(),
+            
+            # - MODEL
+            html.Label('Choose MODEL:'),
+            dcc.Dropdown(id='dropdown-models'),
+            html.Br(),
+
+            # - PARAMS
+            html.Label('Choose PARAMS:'),
+            html.Div(id='inputs-params'),
+            html.Br(),
+            
+        ], style={'width': '48%', 'display': 'inline-block'}),
         
-        # right div
-        # - output of read-in data
-        # - output of training
+        # (right) show what was input
+        html.Div([
+            # - output of read-in data
+            html.Label('Preview DATA:'),
+            html.Div(id='table-data'),
+            html.Br(),
+            
+            # - output of training?
+            # TODO:?
+        ], style={'width': '48%', 'display': 'inline-block'}),
+    ]),
+    html.Br(),
+            
+    # (bottom) save/execute button
+    html.Button('Click to being training/inferencing', id='button-save', n_clicks=0),
+    html.Div(id='button-response-text'),
+    html.Br(),
     
-    # save/execute button
+    # ?
 ])
-# """
-# Workflow needed:
-# I want to TRAIN a new model to CLASSIFY on my DATA with LABELS, using ALG
-# 1. choose to train or infer
-# 2. choose which task you want (e.g. classification, Q&A, next token, etc.)
-#   - inform user that this is supervised (needs labels) or unsupervised (no label needed)
-# 3. display button to import input data file/url
-#   - check whether you have correctly formatted/labeled data
-#   - might include any subset of training, val, testing data?
-# 4. choose which particular model to use (e.g. RF, BERT, etc)
-#   - simply display saved model ids to select (no input params needed?)
-#   - display necessary/optional parameters to enter
-#   - prepopulate with defaults
-#   - allow uploading a config file?
-# 5. display a button to save as configuration/start training or infering
-#   - save config, input file, model, logs somewhere not to be overwritten
-# 6. display a busy spinner 
-#   - possibly on another page, so we can reuse this page
-#   - show progress for some/all models?
-# 7. display results
-#   - depends on 2 and 3 mostly?
-# 8. display button to export results file
-#   - and figures, or the dashboard itself (maybe code to generate it as stand-alone app)???
 
-# So, how do i:
-# - have one button selection change subsequent selection options: https://dash.plotly.com/basic-callbacks#dash-app-with-chained-callbacks
-# - import data: upload: https://dash.plotly.com/dash-core-components/upload
-# - export data: ?
-# - kick of long-running processes and display busy icon: loading: https://dash.plotly.com/dash-core-components/loading
-# - manage users: ??
-# - spawn multi-pages/new port subapps? tab or tabs: https://dash.plotly.com/dash-core-components/tabs
-# - display tables: https://dash.plotly.com/dash-html-components/table
-# - display text snippets with highlights?: xml from label-studio as example???
-# """
+def parse_upload_contents(contents, filename, date):
+    content_type, content_string = contents.split(',')
+    filepath = pathlib.Path(filename)
+    decoded = base64.b64decode(content_string)
+    try:
+        if filepath.suffix == '.csv':
+            # Assume that the user uploaded a CSV file
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        elif filepath.suffix == '.xls' or filepath.suffix == '.xlsx':
+            # Assume that the user uploaded an excel file
+            df = pd.read_excel(io.BytesIO(decoded))
+        else:
+            # TODO: raise error, or silently fail here??
+            df = pd.DataFrame()
+    except Exception as e:
+        print(e)
+        return html.Div('There was an error processing this file.')
+    else:
+        return html.Div([
+            html.H5(filename),
+            html.H6(datetime.datetime.fromtimestamp(date)),
 
-# # Run this app with `python app.py` and
-# # visit http://127.0.0.1:8050/ in your web browser.
+            dash_table.DataTable(
+                df.head(5).to_dict('records'),  # only print top 5 cols
+                [{'name': i, 'id': i} for i in df.columns],
+            ),
 
-# import datetime
-# from dash import Dash, html, dcc
-# from dash.dependencies import Input, Output, State
-# import plotly.express as px
-# import pandas as pd
+            html.Hr(),  # horizontal line
 
-# app = Dash(__name__)
+            # For debugging, display the raw contents provided by the web browser
+            html.Div('Raw Content'),
+            html.Pre(contents[0:200] + '...', style={
+                'whiteSpace': 'pre-wrap',
+                'wordBreak': 'break-all',
+            }),
+        ])
 
-# app.layout = html.Div([
-#     html.H1('Welcome to my Dash ML app!'),
-#     # 1. Train or infer
-#     html.Div([
-#         html.H2("Choose to train a new model, or infer with an existing one:"),
-#         dcc.Dropdown(['TRAIN', 'INFER'], 'TRAIN'),
-#     ]),
-#     # 2. Task
-#     html.Div([
-#         html.H2("Choose which task to perform:"),
-#         dcc.Dropdown(['Classification', 'Clustering'], 'Classification'),
-#     ]),
-#     # 3. Input data
-#     html.Div([
-#         html.H2("Import your data:"),
-#         html.Div([
-#             dcc.Upload(
-#                 id='upload-image',
-#                 children=html.Div([
-#                     'Drag and Drop or ',
-#                     html.A('Select Files')
-#                 ]),
-#                 style={
-#                     'width': '100%',
-#                     'height': '60px',
-#                     'lineHeight': '60px',
-#                     'borderWidth': '1px',
-#                     'borderStyle': 'dashed',
-#                     'borderRadius': '5px',
-#                     'textAlign': 'center',
-#                     'margin': '10px'
-#                 },
-#                 # Allow multiple files to be uploaded
-#                 multiple=True
-#             ),
-#             html.Div(id='output-image-upload'),
-#         ]),
-#     ]),
-# ])
+@app.callback(
+    Output('table-data', 'children'),
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename'),
+    State('upload-data', 'last_modified'),
+)
+def update_table(contents, names, dates):
+    if contents is not None:
+        return [parse_upload_contents(c, n, d) for c, n, d in zip(contents, names, dates)]
 
-# def parse_contents(contents, filename, date):
-#     return html.Div([
-#         html.H5(filename),
-#         html.H6(datetime.datetime.fromtimestamp(date)),
+@app.callback(
+    Output('dropdown-models', 'disabled'),
+    Output('dropdown-models', 'options'),
+    Input('dropdown-tasks', 'value'),
+)
+def update_model_dropdown(task):
+    if task is None:
+        return True, []
+    else:
+        assert task in TASKS_TO_MODEL_TYPES, f'{task=} should be in {TASKS_TO_MODEL_TYPES=}'
+        return False, TASKS_TO_MODEL_TYPES[task]
+    
+# TODO: separate into two, so we can track each separate div produced here
+# like when we need the param values to train, or the id to feed it the input data...
+@app.callback(
+    Output('inputs-params', 'children'),
+    Input('dropdown-models', 'value'),
+    Input('dropdown-modes', 'value'),
+)
+def update_param_inputs(model, mode):
+    if model is None or mode is None:
+        return True, []
+    else:
+        assert mode in MODES, f'{mode=} should be in {MODES=}'
+        if mode == 'Train': # return param inputs with defaults for new model
+            assert model in MODELS_TO_PARAMS, f'{model=} should be in {MODELS_TO_PARAMS=}'
+            return [
+                html.Div([
+                    html.Label(f'{p}: '),
+                    dcc.Input(v, 'number'),
+                ]) for p, v in MODELS_TO_PARAMS[model].items()
+            ]
+        elif mode == 'Infer': # return dropdown of existing model ids
+            assert model in MODELS_TO_INSTANCES, f'{model=} should be in {MODELS_TO_INSTANCES=}'
+            return dcc.Dropdown(MODELS_TO_INSTANCES[model])
 
-#         # HTML images accept base64 encoded strings in the same format
-#         # that is supplied by the upload
-#         html.Img(src=contents),
-#         html.Hr(),
-#         html.Div('Raw Content'),
-#         html.Pre(contents[0:200] + '...', style={
-#             'whiteSpace': 'pre-wrap',
-#             'wordBreak': 'break-all'
-#         })
-#     ])
-
-# @app.callback(Output('output-image-upload', 'children'),
-#               Input('upload-image', 'contents'),
-#               State('upload-image', 'filename'),
-#               State('upload-image', 'last_modified'))
-# def update_output(list_of_contents, list_of_names, list_of_dates):
-#     if list_of_contents is not None:
-#         children = [
-#             parse_contents(c, n, d) for c, n, d in
-#             zip(list_of_contents, list_of_names, list_of_dates)]
-#         return children
-
-
-# if __name__ == '__main__':
-#     app.run_server(debug=True)
+@app.callback(
+    Output('button-response-text', 'children'),
+    Input('button-save', 'n_clicks'),
+)
+def update_button_text(n_clicks):
+    if n_clicks > 0:
+        return 'Click: time to get training!'
