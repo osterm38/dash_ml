@@ -1,3 +1,79 @@
+"""
+At a high level, what I might want to do is:
+- take some data I have (labeled/unlabeled) and train one or more new classifiers on it
+- take some data I have and infer one or more existing classifiers on it
+- save the data in case I think to rerun experiments on it
+- save the models for reuse
+- export the resulting labels/vis/extra outputs
+- do all this in an interactive/no code app
+
+Workflow (TODO: update app to reflect this ASAP!)
+
+PRELIM:
+- upload raw data (new, labeled/unlabeled)
+  - can be in batches, but format must be identical?
+    - eventually enable batching in separate upload sessions (i.e. appending to existing data)
+  - choose a (new/existing?) id
+    - default to filename+timestamp
+  - parse data
+    - must be columnar (for now?), e.g., csv, parquet, etc
+    - columns contain (pre)features, labels, and metadata
+    - rows are samples
+    - concatenate if in batches
+    - ask to deduplicate ahead of time??
+  - save somewhere in better/compressed format
+    - append if allowing such batching/appending
+  - make some of this async if/when time consuming?
+  
+TRAINING:
+- select dataset (exists, labeled/unlabeled)
+  - prepopulate selection with most recent upload, if any 
+- prepare data (for new models)
+  - ask user to determine (pre)feature column(s)
+    - assume first one, by default
+      - allow configuration to change this default behavior???
+  - ask user to determine label(s), if any
+    - assume none are labels (none == no labels, so unsupervised is the way to go)
+  - save somewhere this metadata?
+- assemble pipeline(s)
+  - split label columns for parallel model building?
+  - transform data
+    - available transforms based on auto-assesing dataset
+    - transform features (e.g. tfidf)
+      - select one or more transform options
+      - populate parameters (or accept defaults)
+    - transform labels (e.g. one hot vector?)
+      - select one or more transform options
+      - populate parameters (or accept defaults)
+  - fit model
+    - available models based on auto-assesing dataset (and 0 or >0 labels?)
+    - check which models to throw in here (in parallel pipelines)
+    - enter param values (or settle for defaults)
+  - grid search/k-fold???
+  - save this template somewhere?
+- validation
+  - select if/how to form val data set
+    - carve off of training?
+    - or select another appropos shaped/saved dataset?
+- train button
+  - start training model(s)
+  - pop up loading spinner
+  - when done, save models to file
+  - also generate vis, load into window
+  - enable downloading?
+  
+INFERENCING
+- select dataset
+  - autoassess which models are allowed??
+  - ease linking of this with training, since two might be done sequentially a lot?
+- select trained model(s)
+  - prepopulate with last generated one(s)
+  - select by some good id scheme
+  - assumes data in same format as training data
+  - a pipeline is loaded, transforming the data as trained data
+- infer button
+
+"""
 # -- imports --
 import base64
 import datetime
