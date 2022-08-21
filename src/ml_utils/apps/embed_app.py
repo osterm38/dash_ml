@@ -9,7 +9,7 @@ from dash import Dash, html, dcc, Output, Input
 import plotly.express as px
 import numpy as np
 import pandas as pd
-from ..caching import EmbeddedTextLoader
+from ml_utils.caching import EmbeddedTextLoader
 
 # GLOBAL VARS
 APP = Dash(__name__)
@@ -74,6 +74,29 @@ APP.layout = html.Div([
         ),
     ],  style={'width': '49%', 'display': 'inline-block', 'padding': '0 20'}),
 
+    html.Br(),
+    html.Div([
+        dcc.Upload(
+            id='upload-data',
+            children=html.Div([
+                'Drag and Drop or ',
+                html.A('Select File')
+            ]),
+            style={
+                'width': '100%',
+                'height': '60px',
+                'lineHeight': '60px',
+                'borderWidth': '1px',
+                'borderStyle': 'dashed',
+                'borderRadius': '5px',
+                'textAlign': 'center',
+                'margin': '10px'
+            },
+            # Allow multiple files to be uploaded
+            multiple=False,
+        ),
+        html.Div(id='output-data-upload'),
+    ]),
 ])
 
 # CALLBACKS

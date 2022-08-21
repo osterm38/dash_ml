@@ -8,8 +8,6 @@ import datasets as dx
 from pathlib import Path
 import transformers as tx
 from typing import Dict, List, Optional, Union
-
-from scratch3 import MODEL_NAMES
 from .utils import get_logger
 
 # GLOBAL VARS
@@ -17,7 +15,13 @@ from .utils import get_logger
 LOG = get_logger(name=__name__, level='DEBUG')
 CACHE_BASE = Path.home() / '.cache' / 'ml_utils' # TODO: make dynamic using os.environ['ML_UTILS_CACHE_BASE']?
 FILE_SUFFIXES = ['csv', 'json']
-
+MODEL_NAMES = [
+    #'text-generation'
+    "facebook/opt-125m", # 2g of RAM, 1.2ba/s with ba=10, #tokens=30-60 (so about 10-15 small sentences per sec)
+    "facebook/opt-350m",
+    "facebook/opt-1.3b", # 2.5g download, 8g of RAM just for model
+    # "facebook/opt-2.7b",
+]
 
 # FUNCTIONS
 def load_file_as_dataset(
