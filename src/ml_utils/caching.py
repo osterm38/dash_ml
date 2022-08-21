@@ -15,7 +15,7 @@ from .utils import get_logger
 # GLOBAL VARS
 # TODO: figure a way to dynamic change log level?
 LOG = get_logger(name=__name__, level='DEBUG')
-HERE = Path(__file__).parent
+CACHE_BASE = Path.home() / '.cache' / 'ml_utils' # TODO: make dynamic using os.environ['ML_UTILS_CACHE_BASE']?
 FILE_SUFFIXES = ['csv', 'json']
 
 
@@ -76,7 +76,7 @@ def load_hf_named_dataset(
 
 # CLASSES
 class Loader:
-    CACHE = HERE
+    CACHE = CACHE_BASE
     
     @classmethod
     def get_output_path(self, name: str) -> Path:
@@ -100,7 +100,7 @@ class DatasetDictLoader(Loader):
 
     DSD_KEYS = ['train', 'validation', 'test']
     DSD_FEATURES = [] # inherit/redefine in subclasses?
-    CACHE = HERE.parent.parent / 'datasets'
+    CACHE = Loader.CACHE / 'datasets'
 
     @classmethod
     def load(self, name: str, overwrite: bool = False, paths: Optional[Union[str, Path, Dict[str, Union[str, Path]]]] = None) -> dx.DatasetDict:
@@ -148,15 +148,15 @@ class TextLoader(DatasetDictLoader):
     CACHE = DatasetDictLoader.CACHE / 'texts'
    
         
-class EmbeddedTextLoader(DatasetDictLoader):
+class EmbeddedTextLoader(TextLoader):
     """a raw dataset wrapper where we need embedding columns CLS/MAX/MEAN"""
-    DSD_FEATURES = DatasetDictLoader.DSD_FEATURES + ['text', 'CLS', 'MAX', 'MEAN']
-    CACHE = DatasetDictLoader.CACHE / 'embeddings'
+    DSD_FEATURES = TextLoader.DSD_FEATURES + ['CLS', 'MAX', 'MEAN']
+    CACHE = TextLoader.CACHE.parent / 'embeddings'
     
 
 class ModelLoader(Loader):
     """A simple loader for (transformers-based) sequence classification models"""
-    CACHE = HERE.parent.parent / 'models'
+    CACHE = Loader.CACHE / 'models'
     MOD_TYPE = tx.AutoModelForSequenceClassification
     
     @classmethod

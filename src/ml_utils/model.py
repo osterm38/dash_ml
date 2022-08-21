@@ -14,7 +14,6 @@ from .utils import get_logger
 
 # GLOBAL VARS
 LOG = get_logger(name=__name__, level='DEBUG')
-HERE = Path(__file__).parent
 MODEL_NAMES = [
     #'text-generation'
     "facebook/opt-125m", # 2g of RAM, 1.2ba/s with ba=10, #tokens=30-60 (so about 10-15 small sentences per sec)
