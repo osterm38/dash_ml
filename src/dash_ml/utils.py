@@ -1,7 +1,13 @@
+"""
+A module to store miscellaneous small utility functions that don't have a more appropriate place (yet).
+
+"""
+# IMPORTS
 import logging
 from typing import Optional 
 
 
+# FUNCTIONS
 def get_logger(
     # get local logger TODO: move to other module
     name: Optional[str] = None,

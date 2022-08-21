@@ -1,3 +1,8 @@
+"""
+A module to help with large language model usage (e.g. embedding/predicting).
+
+"""
+# IMPORTS
 import datasets as dx
 import multiprocessing as mp
 from pathlib import Path
@@ -6,9 +11,10 @@ import transformers as tx
 from typing import Optional, List, Any
 from .caching import ModelLoader, ModelTokenizerPair
 from .utils import get_logger
+
+# GLOBAL VARS
 LOG = get_logger(name=__name__, level='DEBUG')
 HERE = Path(__file__).parent
-
 MODEL_NAMES = [
     #'text-generation'
     "facebook/opt-125m", # 2g of RAM, 1.2ba/s with ba=10, #tokens=30-60 (so about 10-15 small sentences per sec)
@@ -18,7 +24,9 @@ MODEL_NAMES = [
 ]
 
 
+# CLASSES
 class Embedder:
+    """A (transformers-based) large language model wrapper that enables extracting embeddings easily/efficiently."""
     def __init__(self, name: str):
         LOG.debug(f'inputs: {name=}')
         self.model_name = name # save for on-the-fly initialization of model

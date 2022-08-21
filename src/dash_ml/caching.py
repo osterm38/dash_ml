@@ -155,6 +155,7 @@ class EmbeddedTextLoader(DatasetDictLoader):
     
 
 class ModelLoader(Loader):
+    """A simple loader for (transformers-based) sequence classification models"""
     CACHE = HERE.parent.parent / 'models'
     MOD_TYPE = tx.AutoModelForSequenceClassification
     
