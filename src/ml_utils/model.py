@@ -119,6 +119,7 @@ class Embedder:
         assert mask.shape[:-1] == hidd.shape[:-1]
         hidd.masked_fill_(mask == 0, float('nan'))
         # LOG.debug(f'{hidd.shape=}')
+        # TODO: what about probabilities/labels???
         res = {
             'MEAN': hidd.nanmean(dim=1).cpu().numpy(),
             # 'MEDIAN': hidd.nanmedian(dim=1).cpu().numpy(),
