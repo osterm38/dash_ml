@@ -100,6 +100,12 @@ class Loader:
     def name_exists(self, name: str) -> bool:
         return self.get_output_path(name).exists()
     
+    @classmethod
+    def get_existing_names(self):
+        # TODO: figure out if subclasses need to check for dir/file?
+        # note that the set is necessary for when zip files duplicate the stem
+        return sorted(set([d.stem for d in self.CACHE.iterdir()]))
+    
     
 class TempLoader(Loader):
     CACHE = Loader.CACHE / 'tmp'
@@ -201,6 +207,11 @@ class ModelLoader(Loader):
     """A simple loader for (transformers-based) sequence classification models"""
     CACHE = Loader.CACHE / 'models'
     MOD_TYPE = tx.AutoModelForSequenceClassification
+    
+    @classmethod
+    def get_existing_names(self):
+        # TODO: figure out if subclasses need to check for dir/file?
+        return sorted(set(MODEL_NAMES) | set([d.stem for d in self.CACHE.iterdir()]))
     
     @classmethod
     def load(self, name: str):
