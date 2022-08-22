@@ -13,6 +13,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict
 from ml_utils.caching import MODEL_NAMES, TempLoader, TextLoader, EmbeddedTextLoader, ModelLoader
+from ml_utils.embedding import Embedder
 from ml_utils.utils import get_logger, zip_dir
 
 # GLOBAL VARS
@@ -127,6 +128,15 @@ APP.layout = html.Div([ dcc.Tabs([ dcc.Tab(label='Upload/Download Datasets', chi
             placeholder='select a model to embed',
         ),
         html.Br(),
+        html.Button("Embed Dataset", id="embed-ds-button"),
+        dcc.Loading(
+            children=[
+                html.Br(),
+                html.Div(id='embed-data-output', children=html.Div([])),
+            ],
+            type='default', #'circle',
+            fullscreen=False,
+        ),
         html.Div([
             dcc.Graph(
                 id='embedding-scatter',
@@ -179,6 +189,37 @@ def download_data_after_click(n_clicks, data_name, model_name):
     print(f'downloading zip of {path=}')
     return dcc.send_file(str(path))
 
+
+@APP.callback(
+    Output("embed-data-output", "children"),
+    Input("embed-ds-button", "n_clicks"),
+    State("embed-dataset-selection", 'value'),
+    State("embed-model-selection", 'value'),
+    prevent_initial_call=True,
+)
+def embed_data_after_click(n_clicks, data_name, model_name):
+    if data_name is None:
+        print(f'oops, please select a dataset!')
+        return
+    if model_name is None:
+        print(f'oops, please select a model!')
+        return
+    # check the most processed to least processed before zipping/sending
+    name = f'{data_name}/{model_name}'
+    print(f'{name=} before embedding')
+    # TODO: think about if we want an overwrite flag or assume clicking means rerun!
+    if not EmbeddedTextLoader.name_exists(name):
+        emb_path = EmbeddedTextLoader.get_output_path(name)
+        print(f'{emb_path=}')
+        # will be most computational part when using LLMs!
+        text_ds = TextLoader.load(data_name)
+        print(f'{text_ds=}')
+        emb_ds = Embedder(model_name).embed(text_ds, concat=True)
+        print(f'{emb_ds=}')
+        emb_ds.save_to_disk(str(emb_path))
+    else:
+        print(f'already exists, skipping rerunning of embedding!')
+    return html.Div(f'Finished embedding {name=}')
 
 @APP.callback(
     Output('embed-dataset-selection', 'options'),
