@@ -5,6 +5,8 @@ A module to help with simple local caching (loading from/writing to file).
 # IMPORTS
 from dataclasses import dataclass
 import datasets as dx
+import io
+import pandas as pd
 from pathlib import Path
 import transformers as tx
 from typing import Dict, List, Optional, Union
@@ -14,7 +16,7 @@ from .utils import get_logger
 # TODO: figure a way to dynamic change log level?
 LOG = get_logger(name=__name__, level='DEBUG')
 CACHE_BASE = Path.home() / '.cache' / 'ml_utils' # TODO: make dynamic using os.environ['ML_UTILS_CACHE_BASE']?
-FILE_SUFFIXES = ['csv', 'json']
+FILE_SUFFIXES = ['csv', 'json', 'parquet']
 MODEL_NAMES = [
     #'text-generation'
     "facebook/opt-125m", # 2g of RAM, 1.2ba/s with ba=10, #tokens=30-60 (so about 10-15 small sentences per sec)
@@ -43,7 +45,7 @@ def load_file_as_dataset(
     LOG.debug(f'cleaned: {path=}, {type_=}')
 
     # load
-    ds = dx.load_dataset('csv', data_files=str(path), split='train')
+    ds = dx.load_dataset(type_, data_files=str(path), split='train')
     LOG.debug(f'loaded: {ds=}')
     
     return ds
@@ -96,9 +98,46 @@ class Loader:
     
     @classmethod
     def name_exists(self, name: str) -> bool:
-        return self.get_output_path(name).is_dir()
+        return self.get_output_path(name).exists()
     
-
+    
+class TempLoader(Loader):
+    CACHE = Loader.CACHE / 'tmp'
+    
+    @classmethod
+    def get_output_path(self, name: str) -> Path:
+        # super class yields a dir, this yields a file
+        return super().get_output_path(name).with_suffix('.parquet')
+    
+    @classmethod
+    def load(self, name: str, overwrite: bool = False, buffer: Optional[bytes] = None):
+        """loads a datasetdict either from file (if nonexistent) or from cache"""
+        # TODO: come up with default way to populate a name?
+        LOG.debug(f'inputs: {name=}, {overwrite=}, {buffer=}, {self.CACHE=}')
+        if buffer is None and not self.name_exists(name):
+            raise Exception(f'oops, should provide buffer or a name to existing temp data store')
+        # else
+        out_path = self.get_output_path(name)
+        if (overwrite or not self.name_exists(name)) and buffer is not None:
+            df = self.load_new(buffer, suffix=Path(name).suffix)
+            df.to_parquet(out_path, index=False, compression='gzip')
+        assert self.name_exists(name), f'oops, named dataset doesnt exist, i.e. {out_path=}?'
+        df = pd.read_parquet(out_path)
+        return df
+    
+    @classmethod
+    def load_new(self, buffer: bytes, suffix: str = ''):
+        """loads a new datasetdict from file(s)"""
+        # TODO: for now, this loads the same way each time called, but eventually need to name/cache/reload from cache 2nd time around?!
+        if suffix in ['.csv', '']:
+            df = pd.read_csv(io.StringIO(buffer.decode('utf-8')))
+        elif suffix in ['.xls', '.xlsx']:
+            df = pd.read_excel(io.BytesIO(buffer))
+        else:
+            raise Exception(f'oops, not handling {suffix=} yet')
+        return df     
+        
+    
 class DatasetDictLoader(Loader):
     """a wrapper around datasets.DatasetDict for convenience where we need train/validation/test split (train must be nonempty)"""
 
